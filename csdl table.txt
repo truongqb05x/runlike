@@ -1,0 +1,19 @@
+-- Tạo bảng posts
+CREATE TABLE posts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    external_post_id VARCHAR(100) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Tạo bảng lưu UID like cho bài viết
+CREATE TABLE post_uids (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    post_id INT NOT NULL,
+    uid VARCHAR(50) NOT NULL,
+    FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+);
+
+-- Tạo bảng lưu danh sách UID toàn cục
+CREATE TABLE global_uids (
+    uid VARCHAR(50) PRIMARY KEY
+);

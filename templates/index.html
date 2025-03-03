@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Quản lý UID Like Bài Viết</title>
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Font Awesome -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background-color: #f8f9fa;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    .sidebar {
+      height: 100vh;
+      background: #2c3e50;
+      color: white;
+      position: fixed;
+      width: 240px;
+      padding-top: 20px;
+    }
+    .sidebar a {
+      color: white;
+      font-weight: 500;
+    }
+    .sidebar a.active,
+    .sidebar a:hover {
+      background-color: #1a252f;
+      border-radius: 4px;
+    }
+    .main-content {
+      margin-left: 260px;
+      padding: 20px;
+    }
+    .card {
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      border: none;
+      border-radius: 10px;
+      margin-bottom: 20px;
+    }
+    .uid-list {
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .nav-link {
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="px-3 mb-4">
+      <h4 class="mb-3">UID Manager</h4>
+      <ul class="nav flex-column">
+        <li class="nav-item mb-2">
+          <a class="nav-link active" onclick="showDashboard()"> 
+            <i class="fas fa-home me-2"></i>Dashboard
+          </a>
+        </li>
+        <li class="nav-item mb-2">
+          <a class="nav-link" onclick="showPostManagement()"> 
+            <i class="fas fa-newspaper me-2"></i>Quản lý Bài Viết
+          </a>
+        </li>
+        <li class="nav-item mb-2">
+          <a class="nav-link" onclick="showStatistics()"> 
+            <i class="fas fa-chart-bar me-2"></i>Thống kê
+          </a>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div class="main-content">
+    <!-- Dashboard -->
+    <div id="dashboardSection">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <h3>Dashboard</h3>
+        <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addPostModal">
+          <i class="fas fa-plus me-2"></i>Thêm Bài Viết
+        </button>
+      </div>
+      <div class="row">
+        <div class="col-md-4">
+          <div class="card bg-primary text-white">
+            <div class="card-body">
+              <h5><i class="fas fa-newspaper me-2"></i>Tổng Bài Viết</h5>
+              <h2 id="totalPosts">0</h2>
+            </div>
+          </div>
+        </div>
+        <div class="col-md-8">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">Danh sách UID toàn cục</h5>
+            </div>
+            <div class="card-body uid-list">
+              <div id="uidList" class="row"></div>
+            </div>
+          </div>
+          <!-- Cập nhật danh sách global UID -->
+          <div class="card">
+            <div class="card-header">
+              <h5>Cập nhật danh sách UID toàn cục</h5>
+            </div>
+            <div class="card-body">
+              <textarea class="form-control" id="customUidList" rows="5" placeholder="Nhập danh sách UID, mỗi UID 1 dòng&#10;ví dụ:&#10;1000&#10;2000"></textarea>
+              <button class="btn btn-primary mt-2" onclick="updateGlobalUids()">Cập nhật danh sách</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quản lý Bài Viết -->
+    <div id="postManagementSection" class="d-none">
+      <div class="mb-4">
+        <h3>Quản lý Bài Viết</h3>
+      </div>
+      <div class="mb-3">
+        <input type="text" class="form-control" id="searchPostInput" placeholder="Tìm kiếm theo UID Facebook" oninput="loadPosts()" />
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>ID Bài Viết</th>
+                <th>Số UID Like</th>
+                <th>UID Tìm Thấy</th>
+                <th>Hành động</th>
+              </tr>
+            </thead>
+            <tbody id="postTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Thống kê -->
+    <div id="statisticsSection" class="d-none">
+      <div class="mb-4">
+        <h3>Thống kê</h3>
+      </div>
+      <div class="card">
+        <div class="card-body">
+          <canvas id="statisticsChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Thêm Bài Viết -->
+  <div class="modal fade" id="addPostModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Thêm UID Like cho Bài Viết</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">ID Bài Viết</label>
+                <input type="text" class="form-control" id="newPostId" />
+              </div>
+              <div class="mb-3">
+                <label class="form-label">Nhập UID (mỗi UID 1 dòng)</label>
+                <textarea class="form-control" id="newUids" rows="5"></textarea>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">Số lượng UID cần lấy</label>
+                <div class="input-group">
+                  <input type="number" class="form-control" id="uidCount" min="1" value="10" />
+                  <button class="btn btn-primary" onclick="getAvailableUids()">
+                    <i class="fas fa-download me-2"></i>Lấy UID
+                  </button>
+                </div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label">UID theo thứ tự trong danh sách</label>
+                <textarea class="form-control" id="availableUids" rows="5" readonly></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+          <button type="button" class="btn btn-primary" onclick="createPost()">Lưu</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Chỉnh sửa UID của bài viết -->
+  <div class="modal fade" id="editPostUidModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Chỉnh sửa UID của bài viết</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <input type="text" class="form-control" id="searchEditPostUidInput" placeholder="Tìm kiếm theo UID Facebook" oninput="renderEditPostUidModal()" />
+          </div>
+          <div id="editPostUidListContainer"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Đóng</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    let currentEditingPost = null;
+    let statisticsChart = null;
+
+    // --- Global UID Functions ---
+    function loadGlobalUids() {
+      fetch('/api/global_uids')
+      .then(response => response.json())
+      .then(data => {
+        const uidList = document.getElementById('uidList');
+        uidList.innerHTML = '';
+        data.forEach(uid => {
+          const div = document.createElement('div');
+          div.className = 'col-md-3 mb-2';
+          div.innerHTML = `<div class="card bg-success text-white"><div class="card-body p-2 text-center">${uid}</div></div>`;
+          uidList.appendChild(div);
+        });
+      });
+    }
+
+    function updateGlobalUids() {
+      const input = document.getElementById('customUidList').value;
+      const uids = input.split('\n').map(uid => uid.trim()).filter(uid => uid);
+      fetch('/api/global_uids', {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({uids})
+      })
+      .then(response => response.json())
+      .then(data => {
+        alert(data.message);
+        loadGlobalUids();
+      });
+    }
+
+    // --- Post Functions ---
+    function loadPosts() {
+      const searchTerm = document.getElementById('searchPostInput').value.trim();
+      let url = '/api/posts';
+      if (searchTerm) {
+        url += '?uid=' + encodeURIComponent(searchTerm);
+      }
+      fetch(url)
+      .then(response => response.json())
+      .then(data => {
+        const tbody = document.getElementById('postTableBody');
+        tbody.innerHTML = '';
+        data.forEach(post => {
+          let matched = [];
+          if (searchTerm) {
+            matched = post.uids.filter(uid => uid.includes(searchTerm));
+          }
+          const row = document.createElement('tr');
+          row.innerHTML = `
+            <td>${post.external_post_id}</td>
+            <td>${post.uids.length}</td>
+            <td>${matched.join(', ')}</td>
+            <td>
+              <button class="btn btn-sm btn-warning" onclick="editPostUids(${post.id})">
+                <i class="fas fa-edit"></i>
+              </button>
+            </td>
+          `;
+          tbody.appendChild(row);
+        });
+        document.getElementById('totalPosts').innerText = data.length;
+      });
+    }
+
+    function createPost() {
+      const externalPostId = document.getElementById('newPostId').value.trim();
+      const uidsInput = document.getElementById('newUids').value;
+      const uids = uidsInput.split('\n').map(uid => uid.trim()).filter(uid => uid);
+      if (!externalPostId) {
+        alert('ID Bài Viết không được để trống.');
+        return;
+      }
+      fetch('/api/posts', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({external_post_id: externalPostId, uids})
+      })
+      .then(response => response.json())
+      .then(data => {
+        alert(data.message);
+        document.getElementById('newPostId').value = '';
+        document.getElementById('newUids').value = '';
+        document.getElementById('availableUids').value = '';
+        loadPosts();
+        var modalEl = document.getElementById('addPostModal');
+        var modal = bootstrap.Modal.getInstance(modalEl);
+        modal.hide();
+      });
+    }
+
+    function getAvailableUids() {
+      const count = parseInt(document.getElementById('uidCount').value);
+      fetch('/api/global_uids')
+      .then(response => response.json())
+      .then(data => {
+        const selectedUids = data.slice(0, count).join('\n');
+        document.getElementById('availableUids').value = selectedUids;
+      });
+    }
+
+    function editPostUids(postId) {
+      fetch('/api/posts')
+      .then(response => response.json())
+      .then(data => {
+        currentEditingPost = data.find(post => post.id === postId);
+        document.getElementById('searchEditPostUidInput').value = '';
+        renderEditPostUidModal();
+        var modal = new bootstrap.Modal(document.getElementById('editPostUidModal'));
+        modal.show();
+      });
+    }
+
+    function renderEditPostUidModal() {
+      const container = document.getElementById('editPostUidListContainer');
+      container.innerHTML = '';
+      if (!currentEditingPost) return;
+      const searchTerm = document.getElementById('searchEditPostUidInput').value.trim();
+      currentEditingPost.uids.forEach((uid, index) => {
+        if (searchTerm && !uid.includes(searchTerm)) return;
+        const div = document.createElement('div');
+        div.className = 'input-group mb-2';
+        div.innerHTML = `
+          <span class="input-group-text">${index + 1}</span>
+          <input type="text" class="form-control" value="${uid}" id="postUidInput_${index}">
+          <button class="btn btn-outline-secondary" type="button" onclick="updatePostUid(${index})">Cập nhật</button>
+        `;
+        container.appendChild(div);
+      });
+      if (container.innerHTML === '') {
+        container.innerHTML = '<p>Không tìm thấy UID phù hợp.</p>';
+      }
+    }
+
+    function updatePostUid(index) {
+      const input = document.getElementById('postUidInput_' + index);
+      const newUid = input.value.trim();
+      if (newUid) {
+        currentEditingPost.uids[index] = newUid;
+        fetch('/api/posts/' + currentEditingPost.id + '/uids', {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({uids: currentEditingPost.uids})
+        })
+        .then(response => response.json())
+        .then(data => {
+          alert(data.message);
+          renderEditPostUidModal();
+          loadPosts();
+        });
+      }
+    }
+
+    // --- Statistics ---
+    function loadStatistics() {
+      fetch('/api/statistics')
+      .then(response => response.json())
+      .then(data => {
+        const labels = data.map(item => item.post_id);
+        const counts = data.map(item => item.uid_count);
+        renderStatisticsChart(labels, counts);
+      });
+    }
+
+    function renderStatisticsChart(labels, counts) {
+      const ctx = document.getElementById('statisticsChart').getContext('2d');
+      if (statisticsChart) statisticsChart.destroy();
+      statisticsChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Số UID Like',
+            data: counts,
+            backgroundColor: 'rgba(54, 162, 235, 0.6)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'top' },
+            title: { display: true, text: 'Thống kê số UID Like theo bài viết' }
+          },
+          scales: { y: { beginAtZero: true, precision: 0 } }
+        }
+      });
+    }
+
+    // --- Navigation ---
+    function showDashboard() {
+      document.getElementById('dashboardSection').classList.remove('d-none');
+      document.getElementById('postManagementSection').classList.add('d-none');
+      document.getElementById('statisticsSection').classList.add('d-none');
+      loadGlobalUids();
+    }
+
+    function showPostManagement() {
+      document.getElementById('dashboardSection').classList.add('d-none');
+      document.getElementById('statisticsSection').classList.add('d-none');
+      document.getElementById('postManagementSection').classList.remove('d-none');
+      loadPosts();
+    }
+
+    function showStatistics() {
+      document.getElementById('dashboardSection').classList.add('d-none');
+      document.getElementById('postManagementSection').classList.add('d-none');
+      document.getElementById('statisticsSection').classList.remove('d-none');
+      loadStatistics();
+    }
+
+    // Khởi tạo giao diện
+    showDashboard();
+  </script>
+</body>
+</html>
